@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NASDAQ-100 Quantitative Market Analytics Terminal</title>
+  <meta name="description" content="Institutional Market Behavior, Intraday Microstructure, Seasonality, and Volatility Analytics for NASDAQ-100 & QQQ.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Plotly.js CDN -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar">
+      <div class="brand-header">
+        <div class="brand-icon">📈</div>
+        <div class="brand-title">
+          <h1>NASDAQ-100</h1>
+          <span>Institutional Research</span>
+        </div>
+      </div>
+
+      <!-- Real-Time Market Clock Widget -->
+      <div class="clock-widget">
+        <div class="clock-header">
+          <span>Market Clock (MYT)</span>
+          <span class="clock-tz">UTC+8</span>
+        </div>
+        <div class="clock-live">
+          <span class="clock-digits" id="clock-digits">--:--:--</span>
+          <span class="clock-tz">MYT</span>
+        </div>
+        <div class="clock-status">
+          <span class="status-dot" id="status-dot"></span>
+          <span class="status-text" id="status-text">INITIALIZING...</span>
+        </div>
+        <div class="session-info-line" id="session-hours">Regular Session: --:-- – --:-- MYT</div>
+        <div class="session-info-line" id="dst-info">US: EDT (Daylight Saving UTC-4)</div>
+      </div>
+
+      <div class="nav-section-title">Research Modules</div>
+      <ul class="nav-menu">
+        <li class="nav-item active" data-view="overview" id="nav-overview">
+          <span class="nav-icon">📊</span>
+          <span>1. Overview & Seasonality</span>
+        </li>
+        <li class="nav-item" data-view="weekday" id="nav-weekday">
+          <span class="nav-icon">📅</span>
+          <span>2. Weekday Seasonality</span>
+        </li>
+        <li class="nav-item" data-view="intraday" id="nav-intraday">
+          <span class="nav-icon">⏱️</span>
+          <span>3. Intraday Profiling (RTH)</span>
+        </li>
+        <li class="nav-item" data-view="opening" id="nav-opening">
+          <span class="nav-icon">🔔</span>
+          <span>4. Opening Dynamics & Gaps</span>
+        </li>
+        <li class="nav-item" data-view="overnight" id="nav-overnight">
+          <span class="nav-icon">🌙</span>
+          <span>5. Overnight vs Regular</span>
+        </li>
+        <li class="nav-item" data-view="volatility" id="nav-volatility">
+          <span class="nav-icon">⚡</span>
+          <span>6. Volatility & Regimes</span>
+        </li>
+        <li class="nav-item" data-view="drawdowns" id="nav-drawdowns">
+          <span class="nav-icon">📉</span>
+          <span>7. Drawdown & Stress</span>
+        </li>
+        <li class="nav-item" data-view="extreme-days" id="nav-extreme-days">
+          <span class="nav-icon">🌋</span>
+          <span>8. Extreme Day Profiles</span>
+        </li>
+        <li class="nav-item" data-view="correlations" id="nav-correlations">
+          <span class="nav-icon">🔗</span>
+          <span>9. S&P 500 Correlations</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+      <!-- Global Top Control Bar -->
+      <header id="topbar">
+        <div class="topbar-left">
+          <div>
+            <div class="page-heading" id="page-title">Market Behavior Overview</div>
+            <div class="page-subheading" id="page-subtitle">Descriptive statistical summary and session structure in Asia/Kuala_Lumpur (MYT)</div>
+          </div>
+        </div>
+
+        <div class="topbar-controls">
+          <div class="filter-group">
+            <span class="filter-label">Instrument:</span>
+            <select class="filter-select" id="filter-instrument">
+              <option value="^NDX">NASDAQ-100 (^NDX)</option>
+              <option value="QQQ">Invesco QQQ Trust (QQQ)</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Period:</span>
+            <select class="filter-select" id="filter-period">
+              <option value="1Y">1Y</option>
+              <option value="3Y">3Y</option>
+              <option value="5Y">5Y</option>
+              <option value="10Y" selected>10Y</option>
+              <option value="Max">Max</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Weekday:</span>
+            <select class="filter-select" id="filter-weekday">
+              <option value="All Days" selected>All Days</option>
+              <option value="Monday">Monday</option>
+              <option value="Tuesday">Tuesday</option>
+              <option value="Wednesday">Wednesday</option>
+              <option value="Thursday">Thursday</option>
+              <option value="Friday">Friday</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label">Regime:</span>
+            <select class="filter-select" id="filter-regime">
+              <option value="All Regimes" selected>All Regimes</option>
+              <option value="Low Volatility">Low Vol</option>
+              <option value="Normal Volatility">Normal Vol</option>
+              <option value="High Volatility">High Vol</option>
+            </select>
+          </div>
+
+          <button class="btn-primary" id="btn-refresh" title="Force Refresh Parquet Cache">
+            <span class="btn-icon">🔄</span>
+            <span>Refresh Cache</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- View Container -->
+      <div id="view-container">
+
+        <!-- ==================================================================
+             VIEW 1: OVERVIEW & SEASONALITY
+             ================================================================== -->
+        <section class="view-panel active" id="view-overview">
+          <div class="kpi-strip">
+            <div class="kpi-card">
+              <div class="kpi-title">Trading Sessions</div>
+              <div class="kpi-value cyan" id="kpi-overview-sessions">—</div>
+              <div class="kpi-sub">Total Sample (n)</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Mean Daily Return</div>
+              <div class="kpi-value positive" id="kpi-overview-mean-ret">—</div>
+              <div class="kpi-sub">Close-to-Close</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Annualized Volatility</div>
+              <div class="kpi-value" id="kpi-overview-vol">—</div>
+              <div class="kpi-sub">Standard Deviation (252d)</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Average Daily Range</div>
+              <div class="kpi-value" id="kpi-overview-range">—</div>
+              <div class="kpi-sub">High - Low (% of Open)</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Positive Sessions</div>
+              <div class="kpi-value positive" id="kpi-overview-win-rate">—</div>
+              <div class="kpi-sub">Historical Win Rate %</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Max Drawdown</div>
+              <div class="kpi-value negative" id="kpi-overview-max-dd">—</div>
+              <div class="kpi-sub">Historical Peak-to-Trough</div>
+            </div>
+          </div>
+
+          <!-- Cumulative Return Chart -->
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">📈 Cumulative Return Decomposition</div>
+                  <div class="card-subtitle">Comparing Total Close-to-Close vs Pure Overnight vs Pure Regular Session Holding</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-overview-cum"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Distribution & Monthly -->
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📊 Return Distribution Histogram</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-overview-dist"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🗓️ Monthly Seasonality (Jan–Dec)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-overview-month"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Yearly & Frequency Table -->
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📊 Year-by-Year Historical Breakdown</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-overview-year"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📋 Historical Event Frequencies</div>
+              </div>
+              <div class="card-body">
+                <div id="table-overview-freq"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Descriptive Stats & Audit -->
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📋 Return Distribution Statistics</div>
+              </div>
+              <div class="card-body">
+                <div id="table-overview-dist"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🔍 Data Quality & Audit Transparency</div>
+              </div>
+              <div class="card-body">
+                <div id="table-overview-audit"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 2: WEEKDAY SEASONALITY
+             ================================================================== -->
+        <section class="view-panel" id="view-weekday">
+          <div class="view-tabs">
+            <button class="view-tab-btn active" data-subtab="weekday-main">📆 Weekday Breakdown</button>
+            <button class="view-tab-btn" data-subtab="weekday-monthly">🗓️ Monthly Seasonality</button>
+            <button class="view-tab-btn" data-subtab="weekday-yearly">📊 Yearly Performance</button>
+          </div>
+
+          <div class="subtab-content" id="subtab-weekday-main">
+            <div class="grid-2col">
+              <div class="dash-card">
+                <div class="card-header">
+                  <div class="card-title">📊 Monday to Friday Mean Return & Win Rate</div>
+                </div>
+                <div class="card-body">
+                  <div class="chart-wrapper" id="chart-weekday-comp"></div>
+                </div>
+              </div>
+
+              <div class="dash-card">
+                <div class="card-header">
+                  <div class="card-title">⚡ Average Daily Range vs Positive Probability</div>
+                </div>
+                <div class="card-body">
+                  <div class="chart-wrapper" id="chart-weekday-range"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid-1col">
+              <div class="dash-card">
+                <div class="card-header">
+                  <div class="card-title">📋 Weekday Statistical Summary Table</div>
+                </div>
+                <div class="card-body">
+                  <div id="table-weekday-summary"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="subtab-content" id="subtab-weekday-monthly" style="display: none;">
+            <div class="grid-1col">
+              <div class="dash-card">
+                <div class="card-header">
+                  <div class="card-title">🗓️ Monthly Return Performance</div>
+                </div>
+                <div class="card-body">
+                  <div class="chart-wrapper" id="chart-weekday-month"></div>
+                </div>
+              </div>
+            </div>
+            <div class="grid-1col">
+              <div class="dash-card">
+                <div class="card-header">
+                  <div class="card-title">📋 Monthly Performance Summary Table</div>
+                </div>
+                <div class="card-body">
+                  <div id="table-weekday-month"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="subtab-content" id="subtab-weekday-yearly" style="display: none;">
+            <div class="grid-1col">
+              <div class="dash-card">
+                <div class="card-header">
+                  <div class="card-title">📊 Annual Performance History</div>
+                </div>
+                <div class="card-body">
+                  <div class="chart-wrapper" id="chart-weekday-year"></div>
+                </div>
+              </div>
+            </div>
+            <div class="grid-1col">
+              <div class="dash-card">
+                <div class="card-header">
+                  <div class="card-title">📋 Yearly Breakdown Table</div>
+                </div>
+                <div class="card-body">
+                  <div id="table-weekday-year"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 3: INTRADAY PROFILING
+             ================================================================== -->
+        <section class="view-panel" id="view-intraday">
+          <div class="inline-controls">
+            <div class="control-item">
+              <label>Resolution:</label>
+              <select id="ctrl-intraday-res">
+                <option value="5m" selected>5 Minutes</option>
+                <option value="10m">10 Minutes</option>
+                <option value="15m">15 Minutes</option>
+                <option value="30m">30 Minutes</option>
+                <option value="60m">60 Minutes</option>
+              </select>
+            </div>
+            <div class="control-item">
+              <label>Profile Metric:</label>
+              <select id="ctrl-intraday-metric">
+                <option value="mean_abs_return_pct" selected>Average Absolute Movement (%)</option>
+                <option value="mean_return_pct">Average Bar Return (%)</option>
+                <option value="median_return_pct">Median Bar Return (%)</option>
+                <option value="realized_vol_pct">Realized Volatility (Annualized %)</option>
+                <option value="mean_range_pct">Average High-Low Range (%)</option>
+                <option value="relative_volume">Relative Volume (Multiple of Mean)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title" id="intraday-prof-title">📈 Intraday Profile across Regular Trading Hours (MYT)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-intraday-prof"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">⚡ Session Realized Volatility Curve (MYT)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-intraday-vol"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📊 Relative Volume vs Volatility / Movement</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-intraday-scatter"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📋 Intraday Time Bucket Statistical Table (MYT)</div>
+              </div>
+              <div class="card-body">
+                <div id="table-intraday-buckets"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 4: OPENING DYNAMICS & GAPS
+             ================================================================== -->
+        <section class="view-panel" id="view-opening">
+          <div class="kpi-strip">
+            <div class="kpi-card">
+              <div class="kpi-title">Mean Opening Gap</div>
+              <div class="kpi-value cyan" id="kpi-opening-mean">—</div>
+              <div class="kpi-sub">Close_{t-1} → Open_t</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Median Opening Gap</div>
+              <div class="kpi-value" id="kpi-opening-median">—</div>
+              <div class="kpi-sub">50th Percentile</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Positive Gaps (Up)</div>
+              <div class="kpi-value positive" id="kpi-opening-up">—</div>
+              <div class="kpi-sub">Open > Prev Close</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Negative Gaps (Down)</div>
+              <div class="kpi-value negative" id="kpi-opening-down">—</div>
+              <div class="kpi-sub">Open < Prev Close</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Gap Fill Rate</div>
+              <div class="kpi-value positive" id="kpi-opening-fill-rate">—</div>
+              <div class="kpi-sub">Historical Gap Fill %</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Median Time to Fill</div>
+              <div class="kpi-value amber" id="kpi-opening-fill-time">—</div>
+              <div class="kpi-sub">Intraday Minutes from Open</div>
+            </div>
+          </div>
+
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🚀 Opening Gap Distribution (Close_{t-1} → Open_t)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-opening-gap"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">⏱️ Intraday Minutes-to-Gap-Fill Distribution</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-opening-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📏 Opening Range as % of Full Session High-Low Amplitude (5m/15m/30m/60m)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-opening-share"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📋 Opening Gap Descriptive Statistics</div>
+              </div>
+              <div class="card-body">
+                <div id="table-opening-stats"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">⏱️ Early Session Windows Summary</div>
+              </div>
+              <div class="card-body">
+                <div id="table-opening-windows"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 5: OVERNIGHT VS REGULAR SESSION
+             ================================================================== -->
+        <section class="view-panel" id="view-overnight">
+          <div class="kpi-strip">
+            <div class="kpi-card">
+              <div class="kpi-title">Overnight Mean Return</div>
+              <div class="kpi-value cyan" id="kpi-overnight-mean">—</div>
+              <div class="kpi-sub" id="kpi-overnight-vol">Vol: —%</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Regular Session Mean</div>
+              <div class="kpi-value" id="kpi-overnight-reg-mean">—</div>
+              <div class="kpi-sub" id="kpi-overnight-reg-vol">Vol: —%</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Overnight Variance Share</div>
+              <div class="kpi-value amber" id="kpi-overnight-var-share">—</div>
+              <div class="kpi-sub">Total Variance Share</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Positive Overnight Drift</div>
+              <div class="kpi-value positive" id="kpi-overnight-pos-drift">—</div>
+              <div class="kpi-sub">Win Rate Overnight</div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📈 Cumulative Return Trajectories: Overnight vs Regular Session</div>
+                <div class="card-subtitle">Simulates compound growth of pure overnight holding vs pure regular session holding</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-overnight-cum"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🌙 Overnight Return Distribution</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-overnight-dist"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">☀️ Regular Session Return Distribution</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-overnight-reg"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📋 Statistical Session Attribution Comparison Table</div>
+              </div>
+              <div class="card-body">
+                <div id="table-overnight-attrib"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 6: VOLATILITY & REGIMES
+             ================================================================== -->
+        <section class="view-panel" id="view-volatility">
+          <div class="inline-controls">
+            <div class="control-item">
+              <label>Low Vol Cutoff (%ile):</label>
+              <input type="range" id="ctrl-vol-low" min="10" max="40" value="25" step="5">
+              <span class="range-val" id="val-vol-low">25%</span>
+            </div>
+            <div class="control-item">
+              <label>High Vol Cutoff (%ile):</label>
+              <input type="range" id="ctrl-vol-high" min="60" max="90" value="75" step="5">
+              <span class="range-val" id="val-vol-high">75%</span>
+            </div>
+            <div class="control-item">
+              <label>Metric:</label>
+              <select id="ctrl-vol-metric">
+                <option value="daily_range_pct" selected>Daily High-Low Range (%)</option>
+                <option value="rolling_vol_20d">Trailing 20d Realized Vol (%)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📈 Rolling Realized Volatility Horizons (20d, 60d, 120d)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-vol-rolling"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🎯 Range and Volatility by Market Regime</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-vol-regimes"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">⏱️ Session Volatility Curve (MYT)</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-vol-session"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📋 Regime Behavioral Comparison Table</div>
+              </div>
+              <div class="card-body">
+                <div id="table-vol-regimes"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 7: DRAWDOWNS & STRESS HISTORY
+             ================================================================== -->
+        <section class="view-panel" id="view-drawdowns">
+          <div class="kpi-strip">
+            <div class="kpi-card">
+              <div class="kpi-title">Max Historical Drawdown</div>
+              <div class="kpi-value negative" id="kpi-dd-max">—</div>
+              <div class="kpi-sub">Peak-to-Trough</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Current Drawdown</div>
+              <div class="kpi-value amber" id="kpi-dd-curr">—</div>
+              <div class="kpi-sub">From All-Time Peak</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Average In-Drawdown Depth</div>
+              <div class="kpi-value" id="kpi-dd-avg">—</div>
+              <div class="kpi-sub">Sessions Below HWM</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Total Sessions Analyzed</div>
+              <div class="kpi-value cyan" id="kpi-dd-sessions">—</div>
+              <div class="kpi-sub">Daily Returns Count</div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🌊 Historical Underwater Drawdown Curve</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-dd-underwater"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📉 Top Drawdown Episode Depths</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-dd-bar"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📋 Major Historical Drawdown Episodes</div>
+              </div>
+              <div class="card-body">
+                <div id="table-dd-episodes"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 8: EXTREME DAYS & TAIL EVENTS
+             ================================================================== -->
+        <section class="view-panel" id="view-extreme-days">
+          <div class="inline-controls">
+            <div class="control-item">
+              <label>Tail Percentile Threshold:</label>
+              <input type="range" id="ctrl-extreme-pct" min="90" max="99" value="95" step="1">
+              <span class="range-val" id="val-extreme-pct">95%</span>
+            </div>
+            <div class="control-item" id="extreme-cutoff-info" style="color: var(--text-muted); font-size: 11.5px;">
+              Threshold: |Return| ≥ --%
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div>
+                  <div class="card-title">🧭 Path Excursion Dynamics: MFE vs MAE</div>
+                  <div class="card-subtitle">Maximum Favorable Excursion (Peak Upward) vs Maximum Adverse Excursion (Deepest Downward) from Cash Open</div>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-extreme-mfe"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🌋 Tail Event Return Distribution</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-extreme-dist"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🟢 Top 10 Largest Positive Days</div>
+              </div>
+              <div class="card-body">
+                <div id="table-extreme-gainers"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🔴 Top 10 Largest Negative Days</div>
+              </div>
+              <div class="card-body">
+                <div id="table-extreme-losers"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">⚡ Top 10 Highest Volatility / Range Days</div>
+              </div>
+              <div class="card-body">
+                <div id="table-extreme-range"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🚀 Top 10 Largest Opening Gaps</div>
+              </div>
+              <div class="card-body">
+                <div id="table-extreme-gaps"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW 9: S&P 500 CORRELATIONS
+             ================================================================== -->
+        <section class="view-panel" id="view-correlations">
+          <div class="inline-controls">
+            <div class="control-item">
+              <label>Benchmark Instrument:</label>
+              <select id="ctrl-corr-bm">
+                <option value="^GSPC" selected>S&P 500 Index (^GSPC)</option>
+                <option value="SPY">SPDR S&P 500 ETF (SPY)</option>
+                <option value="QQQ">Invesco QQQ Trust (QQQ)</option>
+                <option value="TQQQ">ProShares UltraPro QQQ (TQQQ)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="kpi-strip">
+            <div class="kpi-card">
+              <div class="kpi-title">Overall Return Correlation</div>
+              <div class="kpi-value cyan" id="kpi-corr-r">—</div>
+              <div class="kpi-sub">Pearson (r)</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Empirical Beta (β)</div>
+              <div class="kpi-value positive" id="kpi-corr-beta">—</div>
+              <div class="kpi-sub">Relative Sensitivity</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">R-Squared (R²)</div>
+              <div class="kpi-value" id="kpi-corr-r2">—</div>
+              <div class="kpi-sub">Variance Explained</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">Co-Sample Sessions</div>
+              <div class="kpi-value" id="kpi-corr-sessions">—</div>
+              <div class="kpi-sub">Overlapping Sessions (n)</div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title" id="corr-rolling-title">🔗 Rolling 60-Session Return Correlation</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-corr-rolling"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📊 Co-Movement Scatter & Linear Regression Line</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-corr-scatter"></div>
+              </div>
+            </div>
+
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">🌪️ Correlation Across Volatility Regimes</div>
+              </div>
+              <div class="card-body">
+                <div class="chart-wrapper" id="chart-corr-regime"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-1col">
+            <div class="dash-card">
+              <div class="card-header">
+                <div class="card-title">📋 Regime Correlation Breakdown Table</div>
+              </div>
+              <div class="card-body">
+                <div id="table-corr-regimes"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loading-text">FETCHING QUANTITATIVE DATA...</div>
+  </div>
+
+  <!-- Main ES6 JavaScript -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
