@@ -86,6 +86,8 @@
     loadingText: document.getElementById('loading-text'),
     navItems: document.querySelectorAll('.nav-item'),
     viewPanels: document.querySelectorAll('.view-panel'),
+    sidebar: document.getElementById('sidebar'),
+    sidebarToggle: document.getElementById('sidebar-toggle'),
   };
 
   // ---------------------------------------------------------------------------
@@ -749,10 +751,50 @@
 
     // Resize event listener for responsive Plotly charts
     window.addEventListener('resize', () => {
-      const activeCharts = document.querySelectorAll('.view-panel.active .chart-wrapper');
-      activeCharts.forEach((c) => {
-        if (c.data) Plotly.Plots.resize(c);
-      });
+      resizeCharts();
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Responsive Plotly Resize Helper
+  // ---------------------------------------------------------------------------
+  function resizeCharts() {
+    window.dispatchEvent(new Event('resize'));
+    const charts = document.querySelectorAll('.view-panel.active .chart-wrapper, .chart-wrapper');
+    charts.forEach((c) => {
+      if (c && c.data && window.Plotly) {
+        try {
+          Plotly.Plots.resize(c);
+        } catch (err) {
+          // ignore unrendered containers
+        }
+      }
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sidebar Collapse / Toggle Manager (LocalStorage Persisted)
+  // ---------------------------------------------------------------------------
+  function setupSidebarToggle() {
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebar-toggle');
+    if (!toggleBtn || !sidebar) return;
+
+    // Restore persistent state from localStorage
+    const savedState = localStorage.getItem('nasdaq_sidebar_collapsed');
+    if (savedState === 'true') {
+      sidebar.classList.add('collapsed');
+      toggleBtn.classList.add('active');
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      const isNowCollapsed = sidebar.classList.toggle('collapsed');
+      toggleBtn.classList.toggle('active', isNowCollapsed);
+      localStorage.setItem('nasdaq_sidebar_collapsed', isNowCollapsed ? 'true' : 'false');
+
+      // Trigger resize immediately and after CSS transition duration
+      resizeCharts();
+      setTimeout(resizeCharts, 260);
     });
   }
 
@@ -760,6 +802,7 @@
   // Application Bootstrap
   // ---------------------------------------------------------------------------
   async function init() {
+    setupSidebarToggle();
     setupNavigation();
     setupFilterListeners();
     await syncMarketClock();
