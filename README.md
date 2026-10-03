@@ -85,64 +85,64 @@ All datetime operations in `src/timezone_utils.py` utilize Python's standard `zo
 ### 1. Return Decomposition
 * **Total Close-to-Close Return ($R_{\text{total}, t}$):**
 
-  $$
-  R_{\text{total}, t} = \frac{\text{Close}_t - \text{Close}_{t-1}}{\text{Close}_{t-1}} \times 100\%
-  $$
+$$
+R_{\text{total}, t} = \frac{\text{Close}_t - \text{Close}_{t-1}}{\text{Close}_{t-1}} \times 100\\%
+$$
 
 * **Overnight Return ($R_{\text{overnight}, t}$):**
 
-  $$
-  R_{\text{overnight}, t} = \frac{\text{Open}_t - \text{Close}_{t-1}}{\text{Close}_{t-1}} \times 100\%
-  $$
+$$
+R_{\text{overnight}, t} = \frac{\text{Open}_t - \text{Close}_{t-1}}{\text{Close}_{t-1}} \times 100\\%
+$$
 
 * **Regular Session Return ($R_{\text{regular}, t}$):**
 
-  $$
-  R_{\text{regular}, t} = \frac{\text{Close}_t - \text{Open}_t}{\text{Open}_t} \times 100\%
-  $$
+$$
+R_{\text{regular}, t} = \frac{\text{Close}_t - \text{Open}_t}{\text{Open}_t} \times 100\\%
+$$
 
 ### 2. Opening Gap & Gap-Fill Condition
-* **Opening Gap Percentage ($\text{Gap}_{\%}$):**
+* **Opening Gap Percentage ($\text{Gap}_{\\%}$):**
 
-  $$
-  \text{Gap}_{\%} = \frac{\text{Open}_t - \text{Close}_{t-1}}{\text{Close}_{t-1}} \times 100\%
-  $$
+$$
+\text{Gap}_{\\%} = \frac{\text{Open}_t - \text{Close}_{t-1}}{\text{Close}_{t-1}} \times 100\\%
+$$
 
 * **Gap Filled Logic:**
-  * **Up Gap** ($\text{Open} > \text{Close}_{t-1}$): Filled if intraday $\text{Low} \le \text{Close}_{t-1}$.
-  * **Down Gap** ($\text{Open} < \text{Close}_{t-1}$): Filled if intraday $\text{High} \ge \text{Close}_{t-1}$.
+  * **Up Gap** ($\text{Open} > \text{Close}\_{t-1}$): Filled if intraday $\text{Low} \le \text{Close}\_{t-1}$.
+  * **Down Gap** ($\text{Open} < \text{Close}\_{t-1}$): Filled if intraday $\text{High} \ge \text{Close}\_{t-1}$.
 
 ### 3. Path Dynamics (MFE / MAE)
 * **Maximum Favorable Excursion (MFE):**
 
-  $$
-  \text{MFE}_{\%} = \frac{\text{High}_{\text{session}} - \text{Open}_{\text{09:30 ET}}}{\text{Open}_{\text{09:30 ET}}} \times 100\%
-  $$
+$$
+\text{MFE}_{\\%} = \frac{\text{High}_{\text{session}} - \text{Open}_{\text{09:30 ET}}}{\text{Open}_{\text{09:30 ET}}} \times 100\\%
+$$
 
 * **Maximum Adverse Excursion (MAE):**
 
-  $$
-  \text{MAE}_{\%} = \frac{\text{Low}_{\text{session}} - \text{Open}_{\text{09:30 ET}}}{\text{Open}_{\text{09:30 ET}}} \times 100\%
-  $$
+$$
+\text{MAE}_{\\%} = \frac{\text{Low}_{\text{session}} - \text{Open}_{\text{09:30 ET}}}{\text{Open}_{\text{09:30 ET}}} \times 100\\%
+$$
 
 ### 4. Daily High-Low Range & Volatility
-* **Daily High-Low Range Percentage ($\text{Range}_{\%}$):**
+* **Daily High-Low Range Percentage ($\text{Range}_{\\%}$):**
 
-  $$
-  \text{Range}_{\%} = \frac{\text{High}_t - \text{Low}_t}{\text{Open}_t} \times 100\%
-  $$
+$$
+\text{Range}_{\\%} = \frac{\text{High}_t - \text{Low}_t}{\text{Open}_t} \times 100\\%
+$$
 
 * **Parkinson High-Low Realized Volatility ($\sigma_{\text{Parkinson}}$):**
 
-  $$
-  \sigma_{\text{Parkinson}} = \sqrt{\frac{1}{4 \ln 2} \times \frac{1}{N} \sum_{i=1}^{N} \left(\ln \frac{\text{High}_i}{\text{Low}_i}\right)^2} \times \sqrt{252} \times 100\%
-  $$
+$$
+\sigma_{\text{Parkinson}} = \sqrt{\frac{1}{4 \ln 2} \times \frac{1}{N} \sum_{i=1}^{N} \left(\ln \frac{\text{High}_i}{\text{Low}_i}\right)^2} \times \sqrt{252} \times 100\\%
+$$
 
 ### 5. Volatility Regimes
 Trading sessions are categorized using empirical distribution percentiles on daily High-Low Range % or trailing 20-day annualized realized volatility:
-* **Low Volatility**: $< 25\text{th}$ percentile.
-* **Normal Volatility**: $25\text{th} \le x \le 75\text{th}$ percentile.
-* **High Volatility**: $> 75\text{th}$ percentile.
+* **Low Volatility**: < 25th percentile.
+* **Normal Volatility**: 25th to 75th percentile ($25\text{th} \le x \le 75\text{th}$).
+* **High Volatility**: > 75th percentile.
 
 ---
 
